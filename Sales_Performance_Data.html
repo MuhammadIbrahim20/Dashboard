@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Performance Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            background: rgba(173, 216, 230, 0.8); /* Icy Blue */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            padding: 20px;
+        }
+        h2 {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        #dashboard {
+            width: 80%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #fileInput {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: none;
+            color: #fff;
+        }
+        div[id$='Chart'] {
+            width: 80%;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <h2>Sales Performance Dashboard</h2>
+    <input type="file" id="fileInput" accept=".json">
+    <div id="dashboard">
+        <div id="revenueChart"></div>
+        <div id="regionChart"></div>
+        <div id="productChart"></div>
+        <div id="discountChart"></div>
+        <div id="priceVsUnitsChart"></div>
+    </div>
+    
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const salesData = JSON.parse(e.target.result);
+                    generateDashboard(salesData);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function generateDashboard(data) {
+            if (!Array.isArray(data)) {
+                data = [data];
+            }
+            
+            const dates = data.map(item => item.Date);
+            const revenues = data.map(item => item["Total Revenue"]);
+            const regions = [...new Set(data.map(item => item.Region))];
+            const products = [...new Set(data.map(item => item.Product))];
+            
+            Plotly.newPlot('revenueChart', [{
+                x: dates, y: revenues, type: 'scatter', mode: 'lines+markers',
+                marker: { color: 'blue' }
+            }], { title: 'Total Sales Revenue Over Time' });
+            
+            const regionData = regions.map(region => {
+                return {
+                    x: [region],
+                    y: [data.filter(item => item.Region === region).reduce((sum, item) => sum + item["Total Revenue"], 0)],
+                    type: 'bar',
+                    name: region
+                };
+            });
+            Plotly.newPlot('regionChart', regionData, { title: 'Sales Performance by Region' });
+            
+            const productSales = products.map(product => data.filter(item => item.Product === product).reduce((sum, item) => sum + item["Total Revenue"], 0));
+            Plotly.newPlot('productChart', [{
+                labels: products,
+                values: productSales,
+                type: 'pie'
+            }], { title: 'Product-Wise Sales Distribution' });
+            
+            const discounts = data.map(item => item["Discount (%)"]);
+            Plotly.newPlot('discountChart', [{
+                x: discounts, y: revenues, mode: 'markers', type: 'scatter',
+                marker: { size: 10, color: 'red' }
+            }], { title: 'Discount Impact on Sales' });
+            
+            const unitPrices = data.map(item => item["Unit Price"]);
+            const unitsSold = data.map(item => item["Units Sold"]);
+            Plotly.newPlot('priceVsUnitsChart', [{
+                x: unitPrices, y: unitsSold, mode: 'markers', type: 'scatter',
+                marker: { size: 10, color: 'green' }
+            }], { title: 'Average Selling Price vs Units Sold' });
+        }
+    </script>
+</body>
+</html>
