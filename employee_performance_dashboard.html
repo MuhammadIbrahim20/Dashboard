@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Performance Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f6f9;
+            padding: 20px;
+        }
+        #dashboard {
+            width: 90%;
+            margin: auto;
+        }
+        .chart-container {
+            width: 80%;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <h2>Employee Performance Dashboard</h2>
+    <input type="file" id="fileInput" accept=".json">
+    <div id="dashboard">
+        <div class="chart-container" id="taskCompletionRateChart"></div>
+        <div class="chart-container" id="workHoursChart"></div>
+        <div class="chart-container" id="taskProgressChart"></div>
+        <div class="chart-container" id="departmentPerformanceChart"></div>
+        <div class="chart-container" id="workloadDistributionChart"></div>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const employeeData = JSON.parse(e.target.result);
+                    generateDashboard(employeeData);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function generateDashboard(data) {
+            if (!Array.isArray(data)) {
+                data = [data];
+            }
+
+            const employees = data.map(item => item["Employee Name"]);
+            const completionRates = data.map(item => item["Task Completion Rate (%)"]);
+            const workHours = data.map(item => item["Work Hours (per week)"]);
+            const overtimeHours = data.map(item => item["Overtime Hours"]);
+            const departments = [...new Set(data.map(item => item.Department))];
+            const totalTasks = data.map(item => item["Total Tasks Assigned"]);
+            const completedTasks = data.map(item => item["Tasks Completed"]);
+
+            Plotly.newPlot('taskCompletionRateChart', [{
+                x: employees,
+                y: completionRates,
+                type: 'bar',
+                marker: { color: 'blue' }
+            }], { title: 'Task Completion Rate by Employee' });
+
+            Plotly.newPlot('workHoursChart', [{
+                x: workHours,
+                y: overtimeHours,
+                mode: 'markers',
+                type: 'scatter',
+                marker: { size: 10, color: 'red' }
+            }], { title: 'Work Hours vs Overtime Hours' });
+
+            Plotly.newPlot('taskProgressChart', [{
+                x: employees,
+                y: completedTasks,
+                type: 'line',
+                marker: { color: 'green' }
+            }], { title: 'Task Completion Progress' });
+
+            const departmentPerformance = departments.map(dept => {
+                return {
+                    x: [dept],
+                    y: [data.filter(item => item.Department === dept).reduce((sum, item) => sum + item["Task Completion Rate (%)"], 0) / data.filter(item => item.Department === dept).length],
+                    type: 'bar',
+                    name: dept
+                };
+            });
+            Plotly.newPlot('departmentPerformanceChart', departmentPerformance, { title: 'Department-Wise Performance' });
+
+            Plotly.newPlot('workloadDistributionChart', [{
+                labels: employees,
+                values: totalTasks,
+                type: 'pie'
+            }], { title: 'Employee Workload Distribution' });
+        }
+    </script>
+</body>
+</html>
